@@ -7,7 +7,7 @@ The official Rustbound frontend, built with React, Vite, TypeScript, Tailwind CS
 Requires Node.js 22.12+ (tested with Node 24) and npm.
 
 ```powershell
-cd D:\RustSeerver\rustbound-website
+cd D:\RustServer\rustbound-website
 npm install
 npm run dev
 ```
@@ -48,7 +48,8 @@ src/
   App.tsx           Router and shared layout
   main.tsx          App entry and local font imports
   styles.css        Tailwind entry, visual identity and responsive layouts
-public/             Favicon, static-host rewrite and license notices
+public/             Favicon and license notices
+wrangler.jsonc      Cloudflare Workers static assets and SPA routing
 tests/e2e/          Browser integration tests
 scripts/            Asset export and visual inspection helpers
 artifacts/          Desktop and mobile screenshots from verification
@@ -110,7 +111,19 @@ Allowed metrics: `kills`, `kd`, `playtime`, `raids`. Values are non-negative num
 
 ## Deploy
 
-Run `npm run build`, then serve `dist/` over HTTPS. Configure your static host to return `/index.html` for application routes so direct visits to `/wipes`, `/rules`, etc. work. `public/_redirects` supplies this rewrite for hosts that support that format. For Nginx, the equivalent application location uses `try_files $uri $uri/ /index.html;`. Route a future `/api/` backend separately, before the SPA fallback.
+Cloudflare Workers is configured explicitly in `wrangler.jsonc`: it serves `dist/` and uses native `single-page-application` routing for direct visits to `/wipes`, `/rules`, etc. No Worker script or Cloudflare Vite plugin is required for this static frontend.
+
+In Cloudflare Workers Builds, use:
+
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+- Root directory: the directory containing this project's `package.json` and `wrangler.jsonc` (repository root if you uploaded the website contents directly).
+
+Commit/upload `wrangler.jsonc`, the updated `package.json` and `package-lock.json`, and the deletion of `public/_redirects` before retrying the deployment. The previous `/* /index.html 200` rule is rejected by Workers as an infinite loop; do not restore it or copy an old `dist/_redirects` file. Vite rebuilds `dist/` from the corrected source.
+
+For a local configuration/build check without publishing, run `npm run deploy:check`. To publish manually from an authenticated Cloudflare environment, run `npm run deploy`. Set the public `VITE_` values as build environment variables in Cloudflare and rebuild after changing them.
+
+The routing configuration follows [Cloudflare's SPA documentation](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/). For another static host, serve `dist/` over HTTPS and configure its SPA fallback. Nginx can use `try_files $uri $uri/ /index.html;`. Route a future `/api/` backend separately, before the SPA fallback.
 
 ## Verification
 
